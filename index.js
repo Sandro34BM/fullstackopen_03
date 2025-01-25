@@ -1,10 +1,14 @@
+require("dotenv").config();
+
 const express = require("express");
 const app = express();
 const morgan = require("morgan");
-const cors = require('cors')
+const cors = require("cors");
+
+const Person = require("./models/person");
 
 app.use(express.json());
-app.use(express.static('dist'))
+app.use(express.static("dist"));
 
 morgan.token("body", function getId(req) {
 	return JSON.stringify(req.body);
@@ -16,99 +20,97 @@ app.use(
 
 app.use(cors());
 
-let persons = [
-	{
-		id: 1,
-		name: "Arto Hellas",
-		number: "040-123456",
-	},
-	{
-		id: 2,
-		name: "Ada Lovelace",
-		number: "39-44-5323523",
-	},
-	{
-		id: 3,
-		name: "Dan Abramov",
-		number: "12-43-234345",
-	},
-	{
-		id: 4,
-		name: "Mary Poppendieck",
-		number: "39-23-6423122",
-	},
-];
-
-const generateId = () => {
-	return Math.floor(Math.random() * 1000000000);
-};
-
-const validatePerson = (person) => {
-	let errors = [];
-
-	if (!person.name) {
-		errors = errors.concat("Missing 'name' property");
-	}
-	if (!person.number) {
-		errors = errors.concat("Missing 'number' property");
-	}
-	if (persons.find((p) => p.name === person.name)) {
-		errors = errors.concat("Property 'name' must be unique");
-	}
-
-	return errors;
-};
-
-app.get("/info", (request, response) => {
+app.get("/info", (request, response, next) => {
 	const date = new Date();
 
-	response.send(
-		`<p>Phonebook has info for ${persons.length} people</p> <p>${date}</p>`
-	);
+	Person.find({})
+		.then((result) => {
+			response.send(
+				`<p>Phonebook has info for ${result.length} people</p> <p>${date}</p>`
+			);
+		})
+		.catch((error) => next(error));
 });
 
-app.get("/api/persons", (request, response) => {
-	response.json(persons);
+app.get("/api/persons", (request, response, next) => {
+	Person.find({})
+		.then((result) => {
+			response.json(result);
+		})
+		.catch((error) => next(error));
 });
 
-app.get("/api/persons/:id", (request, response) => {
-	const personId = Number(request.params.id);
-	const person = persons.find((person) => person.id === personId);
-
-	if (!person) {
-		return response.status(404).json({
-			error: "Person not found",
-		});
-	}
-
-	response.json(person);
+app.get("/api/persons/:id", (request, response, next) => {
+	Person.findById(request.params.id)
+		.then((person) => {
+			if (person) {
+				response.json(person);
+			} else {
+				response.status(404).end();
+			}
+		})
+		.catch((error) => next(error));
 });
 
-app.delete("/api/persons/:id", (request, response) => {
-	const personId = Number(request.params.id);
-	persons = persons.filter((person) => person.id !== personId);
-
-	response.status(204).end();
+app.delete("/api/persons/:id", (request, response, next) => {
+	Person.findByIdAndDelete(request.params.id)
+		.then((result) => {
+			response.status(204).end();
+		})
+		.catch((error) => next(error));
 });
 
-app.post("/api/persons", (request, response) => {
-	const errors = validatePerson(request.body);
-
-	if (errors.length > 0) {
-		return response.status(400).json({ errors: errors });
-	}
-
+app.put("/api/persons/:id", (request, response, next) => {
 	const person = {
-		id: generateId(),
 		name: request.body.name,
 		number: request.body.number,
 	};
 
-	persons = persons.concat(person);
-	response.json(person);
+	Person.findByIdAndUpdate(request.params.id, person, {
+		new: true,
+		runValidators: true,
+	})
+		.then((updatedPerson) => {
+			console.log(`added ${person.name} number ${person.number} to phonebook`);
+			response.json(updatedPerson);
+		})
+		.catch((error) => next(error));
 });
 
-const PORT = process.env.PORT || 3001
+app.post("/api/persons", (request, response, next) => {
+	const person = new Person({
+		name: request.body.name,
+		number: request.body.number,
+	});
+
+	person
+		.save()
+		.then((savedPerson) => {
+			console.log(`added ${person.name} number ${person.number} to phonebook`);
+			response.json(savedPerson);
+		})
+		.catch((error) => next(error));
+});
+
+const errorHandler = (error, request, response, next) => {
+	console.error(error.message);
+
+	if (error.name === "CastError") {
+		return response
+			.status(400)
+			.send({ error: `Wrong format - ${error.message}` });
+	} else if (error.name === "ValidationError") {
+		return response
+			.status(400)
+			.send({ error: `Validation error - ${error.message}` });
+	}
+
+	next(error);
+};
+
+app.use(errorHandler);
+
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
 	console.log(`Server running on port ${PORT}`);
 });
