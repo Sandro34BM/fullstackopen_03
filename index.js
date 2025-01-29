@@ -1,26 +1,26 @@
-require("dotenv").config();
+require('dotenv').config();
 
-const express = require("express");
+const express = require('express');
 const app = express();
-const morgan = require("morgan");
-const cors = require("cors");
+const morgan = require('morgan');
+const cors = require('cors');
 
-const Person = require("./models/person");
+const Person = require('./models/person').default;
 
 app.use(express.json());
-app.use(express.static("dist"));
+app.use(express.static('dist'));
 
-morgan.token("body", function getId(req) {
+morgan.token('body', function getId(req) {
 	return JSON.stringify(req.body);
 });
 
 app.use(
-	morgan(":method :url :status :res[content-length] - :response-time ms :body")
+	morgan(':method :url :status :res[content-length] - :response-time ms :body')
 );
 
 app.use(cors());
 
-app.get("/info", (request, response, next) => {
+app.get('/info', (request, response, next) => {
 	const date = new Date();
 
 	Person.find({})
@@ -32,7 +32,7 @@ app.get("/info", (request, response, next) => {
 		.catch((error) => next(error));
 });
 
-app.get("/api/persons", (request, response, next) => {
+app.get('/api/persons', (request, response, next) => {
 	Person.find({})
 		.then((result) => {
 			response.json(result);
@@ -40,7 +40,7 @@ app.get("/api/persons", (request, response, next) => {
 		.catch((error) => next(error));
 });
 
-app.get("/api/persons/:id", (request, response, next) => {
+app.get('/api/persons/:id', (request, response, next) => {
 	Person.findById(request.params.id)
 		.then((person) => {
 			if (person) {
@@ -52,15 +52,15 @@ app.get("/api/persons/:id", (request, response, next) => {
 		.catch((error) => next(error));
 });
 
-app.delete("/api/persons/:id", (request, response, next) => {
+app.delete('/api/persons/:id', (request, response, next) => {
 	Person.findByIdAndDelete(request.params.id)
-		.then((result) => {
+		.then(() => {
 			response.status(204).end();
 		})
 		.catch((error) => next(error));
 });
 
-app.put("/api/persons/:id", (request, response, next) => {
+app.put('/api/persons/:id', (request, response, next) => {
 	const person = {
 		name: request.body.name,
 		number: request.body.number,
@@ -77,7 +77,7 @@ app.put("/api/persons/:id", (request, response, next) => {
 		.catch((error) => next(error));
 });
 
-app.post("/api/persons", (request, response, next) => {
+app.post('/api/persons', (request, response, next) => {
 	const person = new Person({
 		name: request.body.name,
 		number: request.body.number,
@@ -95,11 +95,11 @@ app.post("/api/persons", (request, response, next) => {
 const errorHandler = (error, request, response, next) => {
 	console.error(error.message);
 
-	if (error.name === "CastError") {
+	if (error.name === 'CastError') {
 		return response
 			.status(400)
 			.send({ error: `Wrong format - ${error.message}` });
-	} else if (error.name === "ValidationError") {
+	} else if (error.name === 'ValidationError') {
 		return response
 			.status(400)
 			.send({ error: `Validation error - ${error.message}` });

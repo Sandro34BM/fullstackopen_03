@@ -8,7 +8,7 @@ mongoose.set("strictQuery", false);
 
 mongoose
 	.connect(url)
-	.then((result) => {
+	.then(() => {
 		console.log("connected to MongoDB");
 	})
 	.catch((error) => {
@@ -18,18 +18,18 @@ mongoose
 const personSchema = new mongoose.Schema({
 	name: {
 		type: String,
-		minLength: [3, 'Minimum name length is 3'],
-		required: [true, 'Name is required'],
+		minLength: [3, "Minimum name length is 3"],
+		required: [true, "Name is required"],
 	},
 	number: {
 		type: String,
-		minLength: [8, 'Minimum phone number length is 8'],
-		required: [true, 'Phone number is required'],
+		minLength: [8, "Minimum phone number length is 8"],
+		required: [true, "Phone number is required"],
 		validate: {
 			validator: function (v) {
 				return /([0-9]{2,3}-[0-9]{1,})/.test(v);
 			},
-            message: props => `${props.value} is not a valid phone number!`
+			message: (props) => `${props.value} is not a valid phone number!`,
 		},
 	},
 });
